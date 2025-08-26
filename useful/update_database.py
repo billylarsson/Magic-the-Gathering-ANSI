@@ -5,8 +5,8 @@ db_path_card_datas: str = f'{this_dir[:this_dir.rfind(os.sep)]}{os.sep}quick_db.
 db_path_ansi_datas: str = f'{this_dir[:this_dir.rfind(os.sep)]}{os.sep}ansi_db.sqlite'
 
 
-CARD_COLUMNS: set = {'power', 'toughness', 'cmc', 'name', 'artist', 'type', 'setcode', 'types', 'text', 'artist', 'scryfall_id',
-                     'flavor_text', 'keywords', 'side', 'frame_effects', 'number', 'layout', 'loyalty', 'rarity', 'mana_cost', 'colors', 'color_identity'}
+CARD_COLUMNS: set = {'power', 'toughness', 'cmc', 'name', 'type', 'setcode', 'types', 'text', 'artist', 'scryfall_id',
+                     'keywords', 'side', 'frame_effects', 'number', 'loyalty', 'rarity', 'mana_cost', 'colors', 'color_identity'}
 
 SET_COLUMNS: set = {'name', 'releasedate_epoch', 'releasedate_string', 'setcode', 'type'}
 
@@ -135,3 +135,76 @@ def make_quick_db():
 
     dst_cursor.close()
     dst_connection.close()
+
+def inject_ansi(dst_connection, dst_cursor):
+    if not os.path.exists(db_path_ansi_datas):
+        return
+
+    src_connection = sqlite3.connect(db_path_ansi_datas)
+    src_cursor = src_connection.cursor()
+    q: str = 'select scryfall_id, ansi from ansidata'
+    id_ansi: dict = {scryfall_id: ansi for scryfall_id, ansi in src_cursor.execute(q).fetchall()}
+
+    q: str = 'select scryfall_id from cards where ansi is null'
+    matches: set = {x[0] for x in dst_cursor.execute(q).fetchall() if x[0] in id_ansi}
+    if not matches:
+        return
+
+    Card = lambda: None
+    q: str = f'PRAGMA table_info(cards)'
+    [setattr(Card, x[1], x[0]) for x in dst_cursor.execute(q).fetchall()]
+
+    q: str = 'select * from cards'
+    all_cards: list = [x for x in dst_cursor.execute(q).fetchall()]
+    for n, card in enumerate(all_cards):
+        scryfall_id: str = card[Card.scryfall_id]
+        if scryfall_id not in matches:
+            continue
+
+        tmp_card: list = list(card)
+        tmp_card[Card.ansi]: bytes = id_ansi[scryfall_id]
+        all_cards[n]: tuple = tuple(tmp_card)
+
+    with dst_connection:
+        q: str = 'delete from cards;' # because individually updating takes loads of time without auto_ids
+        dst_cursor.execute(q)
+
+        placehldrs: str = ','.join(['?'] * len(all_cards[0]))
+        q: str = f'insert into cards values({placehldrs})'
+        dst_cursor.executemany(q, all_cards)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

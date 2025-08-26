@@ -1,7 +1,6 @@
 from useful.termcols import *
 from useful.database import Card, SETCODE_TIME,SETCODE_EXPNAME
-from useful.termcols import lgt_yellow,lgt_rose,lgt_blue,lgt_green
-from useful.breakdown import smartkeys,IntKey,StrKey,BoolKey
+from useful.termcols import lgt_yellow
 import gzip,io,random,time
 
 
@@ -40,7 +39,7 @@ def unpack_ansi(ansi_raw: bytes) -> dict:
         rows: dict = {n: [int(x) for x in row.split()] for n, row in enumerate(raw_rows)}
         for y, cols in rows.items():
             for n, col in enumerate(cols):
-                cols[n]: str = f'\033[38;5;{col}m{val_char[col]}'
+                cols[n]: str = f'\33[38;5;{col}m{val_char[col]}'
 
         return rows
 
@@ -182,8 +181,8 @@ def inject_textbox(card: tuple, rows: dict):
         in_clamp: bool = False
         for y, text in text_rows.items():
             for n, char in enumerate(text):
-                if char in ['{', '}']:
-                    in_clamp = not in_clamp
+                if char in '{}':
+                    in_clamp = char in '{'
                     color: str = clamp_col
 
                 elif in_clamp:
@@ -262,8 +261,8 @@ def printout_ansi(card: tuple):
     for y, cols in rows.items():
 
         void_col: str = '\33[38:5:233m'
-        void_char: str = '#'
-        cols = [x if ' ' not in x else void_col + void_char for x in cols]  # expose void?
+        void_char: str = ' '
+        cols = [x if x not in ' ' else f'{void_col}{void_char}{end}' for x in cols]  # expose void?
 
         outline_col: str = '\33[38:5:251m'
         if y == 0:
@@ -341,39 +340,4 @@ def printout_breakdown(breakdown: list):
                     final += f'{drk_white}{val}{end}'
 
     print(final, end='', flush=True)
-
-def printout_help():
-    print(details_equals(' ' * len('SEARCH AHEAD MOTHERFCKR')))
-
-    intkeys: list = [smk for smk in smartkeys if isinstance(smk, IntKey)]
-    strkeys: list = [smk for smk in smartkeys if isinstance(smk, StrKey)]
-    boolkeys: list = [smk for smk in smartkeys if isinstance(smk, BoolKey)]
-    [keylist.sort(key=lambda x: x.key) for keylist in (intkeys, strkeys, boolkeys)]
-
-    key_col: str = lgt_blue
-    sep_col: str = lgt_rose
-    txt_col: str = salmon
-
-    for keylist in [strkeys, intkeys, boolkeys]:
-
-        keywords: list = [x.key for x in keylist]
-        seps: tuple = keylist[0].seps
-        print(f'KEYWORDS: {key_col}{" ".join(keywords)}{end}')
-        print(f'SEPARATORS: {sep_col}{" ".join(seps)}{end}')
-
-        if isinstance(keylist[0], StrKey):
-            print(f'EXAMPLE: {key_col}name{sep_col}={txt_col}emrakul,the{end} or {key_col}name{sep_col}={txt_col}"emrakul, the" {key_col}artist{sep_col}={txt_col}mark_tedin{end}')
-
-        elif isinstance(keylist[0], IntKey):
-            print(f'EXAMPLE: {key_col}pow{sep_col}<={txt_col}8 {key_col}tough{sep_col}={txt_col}5 {key_col}cmc{sep_col}!=5{end}')
-
-        else:
-            print(f'EXAMPLE: {key_col}inst{sep_col}={txt_col}false{end} or just lone {key_col}inst{end} which defaults to true')
-        print('')
-
-    print(f'\nA-NOTE: name is the default keyword that text that cannot be matched elsewhere automatically defaults to meaning: {txt_col}emrakul the a tor{end} will be read as {key_col}name{sep_col}={txt_col}emrakul_the_a_tor{end} which returns {crm_white}Emrakul, the Aeons Torn{end}')
-    print(f'SAMPLE: {lgt_green}type!=instant creature ra k l p>=10 em t=15 cmc>10 cmc!=14 artist=tedin creature keyw=flying,an,tor text=cast_when_turn_extra{end} will return {crm_white}Emrakul, the Aeons Torn{end}')
-    print(details_equals(' ' * len('SEARCH AHEAD MOTHERFCKR')))
-
-
 

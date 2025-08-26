@@ -307,7 +307,6 @@ smartkeys: list[SmartKey] = [
     StrKey(key='type', keys={'spec', 'specbox', 'type'}),
     StrKey(key='expansion', min_reach=3),
     StrKey(key='artist'),
-    StrKey(key='flavor'),
     StrKey(key='colors', min_reach=3, seps=BoolKey.seps),
     StrKey(key='cost', keys={'costs'}, seps=BoolKey.seps),
     StrKey(key='textbox', min_reach=4, seps=BoolKey.seps),

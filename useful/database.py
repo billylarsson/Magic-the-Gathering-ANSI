@@ -1,5 +1,6 @@
-import time, sqlite3, os
+import time, sqlite3, os, sys
 from useful.termcols import crm_white,end
+from useful.update_database import inject_ansi
 
 class Card:
     """"""
@@ -22,22 +23,9 @@ db_path_card_datas: str = f'{this_dir[:this_dir.rfind(os.sep)]}{os.sep}quick_db.
 connection = sqlite3.connect(db_path_card_datas)
 cursor = connection.cursor()
 
-# ansi_test: str = 'select * from cards where ansi is not null'
-# if not cursor.execute(ansi_test).fetchone():
-#     for walk in os.walk(this_dir):
-#         for f in walk[-1]:
-#             if f.startswith('ansi') and f.endswith('.sqlite'):
-#                 ansi_con = sqlite3.connect(f'{walk[0]}{os.sep}{f}')
-#                 ansi_cur = ansi_con.cursor()
-#                 q: str = 'select scryfall_id, ansi from data'
-#                 for scryfall_id, ansi in ansi_cur.execute(q).fetchall():
-#                     q: str = f'update cards set ansi = (?) where scryfall_id is (?)'
-#                     v: tuple = ansi, scryfall_id,
-#                     cursor.execute(q, v)
-#
-#                 connection.commit()
-#                 ansi_con.close()
-
+q: str = 'select * from cards where ansi is not null'
+if '--no-ansi' not in sys.argv[1:] and not cursor.execute(q).fetchone():
+    inject_ansi(connection, cursor)
 
 q: str = f'PRAGMA table_info(cards)'
 [setattr(Card, x[1], x[0]) for x in cursor.execute(q).fetchall()]
@@ -105,6 +93,3 @@ for name, bag in NAME_BAG.items():
 
 timer_end: float = time.time() - timer_start
 print(f'{crm_white}{len(NAME_BAG)}{end} cards loaded into ram in {crm_white}{round(timer_end, 2)}{end} seconds', flush=True)
-
-
-
