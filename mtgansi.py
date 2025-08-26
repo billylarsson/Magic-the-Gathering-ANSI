@@ -36,7 +36,6 @@ def get_user_input() -> str:
     return input(f'\n{orange}SEARCH TERMS:{end} ')
 
 CLEAR_SCREEN = lambda: os.system('clear') if os.sep in '/' else os.system('cls')
-
 while True:
     q: str = get_user_input()
     q = tweak_query(text=q)

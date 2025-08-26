@@ -1,6 +1,6 @@
 import time, sqlite3, os, sys
 from useful.termcols import crm_white,end
-from useful.update_database import inject_ansi
+from useful.update_database import inject_ansi,inject_prices
 
 class Card:
     """"""
@@ -23,15 +23,27 @@ db_path_card_datas: str = f'{this_dir[:this_dir.rfind(os.sep)]}{os.sep}quick_db.
 connection = sqlite3.connect(db_path_card_datas)
 cursor = connection.cursor()
 
-q: str = 'select * from cards where ansi is not null'
-if '--no-ansi' not in sys.argv[1:] and not cursor.execute(q).fetchone():
-    inject_ansi(connection, cursor)
-
-q: str = f'PRAGMA table_info(cards)'
+q: str = f'PRAGMA table_info(sets)'
 [setattr(Card, x[1], x[0]) for x in cursor.execute(q).fetchall()]
 
-q: str = f'PRAGMA table_info(sets)'
-[setattr(Set, x[1], x[0]) for x in cursor.execute(q).fetchall()]
+q: str = f'PRAGMA table_info(cards)'
+cols: dict = {x[1]: x[0] for x in cursor.execute(q).fetchall()}
+for col_name, col_type in dict(ansi='BLOB', regular_price='FLOAT', foil_price='FLOAT').items():
+    if col_name not in cols:
+        with connection:
+            q: str = f'alter table cards add column {col_name} {col_type}'
+            cursor.execute(q)
+
+        q: str = f'PRAGMA table_info(cards)'
+        [cols.update({x[1]: x[0]}) for x in cursor.execute(q).fetchall()]
+
+[setattr(Card, col, ix) for col, ix in cols.items()]
+
+if '--no-ansi' not in sys.argv[1:]:
+    inject_ansi(connection, cursor)
+
+if '--no-price' not in sys.argv[1:]:
+    inject_prices(connection, cursor)
 
 q: str = (f'select setcode, releasedate_epoch from sets '
           f'where setcode is not null '

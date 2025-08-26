@@ -266,8 +266,31 @@ def printout_ansi(card: tuple):
 
         outline_col: str = '\33[38:5:251m'
         if y == 0:
-            line: str = '─' * (len(cols) - 4)
-            print(f'{outline_col}┌{line}┐')
+            if card[Card.regular_price] or card[Card.foil_price]:
+                lines: list = [f'{outline_col}─' for _ in range(len(cols) - 4)]
+
+                if card[Card.regular_price] and not card[Card.foil_price]:
+                    price: str = f'[ {card[Card.regular_price]:.2f} ]'
+                elif card[Card.foil_price] and not card[Card.regular_price]:
+                    price: str = f'[ {card[Card.foil_price]:.2f} ]'
+                else:
+                    price: str = f'[ {card[Card.regular_price]:.2f} / {card[Card.foil_price]:.2f} ]'
+
+
+                for n, char in enumerate(price):
+                    if char in '[/]':
+                        char = end + char
+                    else:
+                        char = drk_salmon + char
+
+                    lines[n + 2] = char
+
+
+                print(f'{outline_col}┌{"".join(lines)}┐')
+            else:
+                line: str = '─' * (len(cols) - 4)
+                print(f'{outline_col}┌{line}┐')
+
         elif y == len(rows) - 1:
             setcode: str = card[Card.setcode]
             expname: str = SETCODE_EXPNAME[setcode]
@@ -275,6 +298,7 @@ def printout_ansi(card: tuple):
             line += f'[ {expname} ]'
             line += '─' * ((len(cols) - 4) - len(line))
             print(f'{outline_col}└{line}┘')
+
         else:
             row: str = ''.join(cols[2:-2]) + end
             print(f'{outline_col}│{row}{outline_col}│{end}')
